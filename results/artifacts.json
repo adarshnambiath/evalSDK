@@ -1,0 +1,8 @@
+[
+  {
+    "type": "MODEL_CHECKPOINT",
+    "path": "./models/decision_tree.pkl",
+    "name": "Decision Tree",
+    "timestamp": "2026-07-06T08:22:31.643405Z"
+  }
+]
