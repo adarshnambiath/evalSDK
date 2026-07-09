@@ -9,6 +9,7 @@ from .exceptions import (
     DuplicateSampleError,
     InvalidTaskError,
     LengthMismatchError,
+    ReservedColumnError,
     ValidationError,
 )
 
@@ -61,4 +62,53 @@ def validate_inputs(
             raise LengthMismatchError(
                 f"Length mismatch: probabilities has {len(probabilities)} rows "
                 f"but sample_ids has {n} entries."
+            )
+
+
+_RESERVED_COLUMNS: frozenset = frozenset({
+    "sample_id",
+    "ground_truth",
+    "prediction",
+    "confidence",
+    "correct",
+    "residual",
+    "absolute_error",
+    "evaluation_index",
+})
+
+
+def validate_columns(
+    columns: Optional[dict],
+    sample_ids: Sequence,
+) -> None:
+    """Validate user-supplied per-sample columns.
+
+    Args:
+        columns: Optional dictionary mapping column names to per-sample values.
+        sample_ids: The sample identifiers used to check length.
+
+    Raises:
+        ValidationError: If a column value is not a list-like.
+        LengthMismatchError: If a column does not have the same length as sample_ids.
+        ReservedColumnError: If a column name collides with an SDK-owned column.
+    """
+    if columns is None:
+        return
+
+    n = len(sample_ids)
+
+    for name, values in columns.items():
+        if not hasattr(values, "__len__"):
+            raise ValidationError(
+                f"Column '{name}' must be a list-like; got {type(values).__name__}."
+            )
+        if len(values) != n:
+            raise LengthMismatchError(
+                f"Column '{name}' has {len(values)} entries but "
+                f"sample_ids has {n} entries."
+            )
+        if name in _RESERVED_COLUMNS:
+            raise ReservedColumnError(
+                f"Column name '{name}' is reserved by the SDK. "
+                f"Choose a different name."
             )

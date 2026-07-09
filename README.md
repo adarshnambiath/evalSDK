@@ -33,6 +33,53 @@ session.publish_artifact(
 session.finish()
 ```
 
+
+## Per-Sample Columns
+
+You can attach arbitrary per-sample columns to any evaluation. The SDK
+validates, stores, and serializes them without interpretation.
+
+```python
+session.publish_evaluation(
+    task="classification",
+    sample_ids=sample_ids,
+    ground_truth=ground_truth,
+    predictions=predictions,
+    columns={
+        "window_start": [0, 10, 20, ...],
+        "window_end":   [10, 20, 30, ...],
+        "record_name":  ["rec_1", "rec_2", "rec_3", ...],
+    },
+)
+```
+
+**Requirements:**
+
+- Each column value must be a list (or list-like) with the same length as
+  ``sample_ids``.
+- Column names must **not** collide with SDK-owned columns:
+  ``sample_id``, ``ground_truth``, ``prediction``, ``confidence``,
+  ``correct``, ``residual``, ``absolute_error``, ``evaluation_index``.
+- Any other name is allowed.
+
+These columns are written into ``evaluation.parquet`` automatically.
+
+They are **ignored** by metrics computation and do not appear in
+``metrics.json`` or ``artifacts.json``.
+
+This feature is domain agnostic. Examples of use:
+
+| Domain | Example columns |
+|--------|----------------|
+| ECG | ``window_start``, ``window_end``, ``record_name`` |
+| Images | ``bounding_box``, ``image_path`` |
+| NLP | ``token_span``, ``document_id`` |
+| Audio | ``timestamp``, ``segment_id`` |
+
+The SDK never interprets column values. They exist purely for downstream
+investigation, visualization, or provenance. They are stored as-is in
+the evaluation parquet table.
+
 ## Classification Example
 
 ```python

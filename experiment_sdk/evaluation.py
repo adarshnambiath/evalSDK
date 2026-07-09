@@ -8,7 +8,7 @@ import pandas as pd
 from .constants import TaskType
 from .metrics import compute_metrics
 from .schemas import EvaluationRecord
-from .validation import validate_inputs
+from .validation import validate_columns, validate_inputs
 
 
 class Evaluation:
@@ -22,6 +22,7 @@ class Evaluation:
         predictions: list,
         probabilities: Optional[list] = None,
         metadata: Optional[Dict[str, Any]] = None,
+        columns: Optional[Dict[str, list]] = None,
     ) -> None:
         validate_inputs(
             task=task,
@@ -30,6 +31,7 @@ class Evaluation:
             predictions=predictions,
             probabilities=probabilities,
         )
+        validate_columns(columns, sample_ids)
 
         self.sample_ids = np.asarray(sample_ids)
         self.ground_truth = np.asarray(ground_truth)
@@ -39,6 +41,7 @@ class Evaluation:
         )
         self.metadata = metadata or {}
         self.task = task
+        self.columns = columns or {}
 
         self.evaluation_table = self._build_table()
         self.metrics = compute_metrics(
@@ -70,11 +73,14 @@ class Evaluation:
         else:
             table["confidence"] = np.nan
 
+        for name, values in self.columns.items():
+            table[name] = list(values)
+
         return table
 
     def _build_regression_table(self) -> pd.DataFrame:
         residuals = self.predictions - self.ground_truth
-        return pd.DataFrame(
+        table = pd.DataFrame(
             {
                 "sample_id": self.sample_ids,
                 "ground_truth": self.ground_truth,
@@ -83,6 +89,11 @@ class Evaluation:
                 "absolute_error": np.abs(residuals),
             }
         )
+
+        for name, values in self.columns.items():
+            table[name] = list(values)
+
+        return table
 
     def to_record(self) -> EvaluationRecord:
         """Return an EvaluationRecord snapshot."""

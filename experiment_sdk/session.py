@@ -38,6 +38,7 @@ class ExperimentSession:
         predictions: list,
         probabilities: Optional[list] = None,
         metadata: Optional[Dict[str, Any]] = None,
+        columns: Optional[Dict[str, list]] = None,
     ) -> Evaluation:
         """Validate inputs, build an evaluation, and store it.
 
@@ -48,6 +49,12 @@ class ExperimentSession:
             predictions: Predicted labels or values.
             probabilities: Optional predicted probabilities (classification).
             metadata: Optional metadata dictionary.
+            columns: Optional dictionary of additional per-sample columns.
+                Each value must be a list-like with the same length as
+                ``sample_ids``. Column names must not collide with
+                SDK-owned columns (``sample_id``, ``ground_truth``,
+                ``prediction``, ``confidence``, ``correct``, ``residual``,
+                ``absolute_error``, ``evaluation_index``).
 
         Returns:
             The created Evaluation instance.
@@ -59,6 +66,7 @@ class ExperimentSession:
             predictions=ensure_list(predictions),
             probabilities=ensure_list(probabilities) if probabilities is not None else None,
             metadata=metadata,
+            columns=columns,
         )
         self._evaluations.append(evaluation)
         return evaluation

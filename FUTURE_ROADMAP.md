@@ -62,8 +62,27 @@ Future investigation examples include:
 - Residual analysis
 - Embedding exploration
 - Attention visualization
+- Filtering by per-sample columns (e.g. ``window_start``, ``record_name``)
 
 The SDK should continue to focus only on producing standardized evaluation artifacts.
+
+## Per-Sample Columns (Implemented)
+
+The ``columns`` parameter on ``publish_evaluation()`` allows users to
+attach domain-specific per-sample data (e.g. ``window_start``,
+``record_name``, ``bounding_box``, ``token_span``) to the evaluation
+table.
+
+These columns are:
+
+- Validated (length, reserved name collision)
+- Stored in the evaluation table
+- Serialized into ``evaluation.parquet``
+- Ignored by metrics computation
+
+This feature is intentionally generic. It exists so that downstream
+platforms can consume the extra columns for investigation and
+provenance without the SDK needing to know what they mean.
 
 ## Future Architectural Goal
 

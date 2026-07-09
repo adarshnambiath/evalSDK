@@ -23,3 +23,7 @@ class InvalidTaskError(ValidationError):
 
 class MissingPredictionError(ValidationError):
     """Raised when required prediction data is missing."""
+
+
+class ReservedColumnError(ValidationError):
+    """Raised when a user-supplied column name collides with an SDK-owned column."""
