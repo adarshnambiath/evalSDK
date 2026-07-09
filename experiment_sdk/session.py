@@ -9,6 +9,7 @@ from .artifacts import ArtifactRegistry
 from .constants import ArtifactType, TaskType
 from .evaluation import Evaluation
 from .io import write_artifacts, write_evaluation_table, write_metrics
+from .preview import OutputEstimator
 from .schemas import EvaluationRecord
 from .utils import ensure_list
 
@@ -90,8 +91,8 @@ class ExperimentSession:
             name=name,
         )
 
-    def finish(self) -> None:
-        """Serialize the experiment outputs to disk."""
+    def preview(self) -> None:
+        """Print a summary of outputs without writing anything."""
 
         if not self._evaluations:
             raise ValueError("No evaluation has been published.")
@@ -100,6 +101,44 @@ class ExperimentSession:
             raise ValueError(
                 "ExperimentSession currently supports exactly one evaluation."
             )
+
+        estimator = OutputEstimator(
+            evaluations=self._evaluations,
+            artifacts=self.artifact_registry,
+            output_directory=self.output_directory,
+        )
+        plan = estimator.build_plan()
+        estimator.print_preview(plan)
+
+    def finish(self, confirm: bool = True) -> None:
+        """Serialize the experiment outputs to disk.
+
+        Args:
+            confirm: If True, print a preview and ask for confirmation before
+                writing any files. If False (default), write files immediately.
+        """
+
+        if not self._evaluations:
+            raise ValueError("No evaluation has been published.")
+
+        if len(self._evaluations) > 1:
+            raise ValueError(
+                "ExperimentSession currently supports exactly one evaluation."
+            )
+
+        estimator = OutputEstimator(
+            evaluations=self._evaluations,
+            artifacts=self.artifact_registry,
+            output_directory=self.output_directory,
+        )
+        plan = estimator.build_plan()
+
+        if confirm:
+            estimator.print_preview(plan)
+            response = input("Proceed with serialization? [Y/n] ").strip().lower()
+            if response not in ("", "y", "yes"):
+                print("Serialization cancelled.")
+                return
 
         evaluation = self._evaluations[0]
 
