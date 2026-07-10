@@ -4,6 +4,8 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from .estimation import estimate_dataframe_parquet_size
+
 
 class OutputEstimator:
     """Estimates output sizes and builds publish plans without writing files."""
@@ -18,10 +20,18 @@ class OutputEstimator:
         self._artifacts = artifacts
         self._output_directory = Path(output_directory)
 
-    def _estimate_parquet_size(self) -> int:
+    def _estimate_raw_parquet_size(self) -> int:
         total = 0
         for evaluation in self._evaluations:
             total += evaluation.evaluation_table.memory_usage(deep=True).sum()
+        return int(total)
+
+    def _estimate_parquet_size(self) -> int:
+        total = 0
+        for evaluation in self._evaluations:
+            total += estimate_dataframe_parquet_size(
+                evaluation.evaluation_table
+            )
         return int(total)
 
     def _estimate_metrics_size(self) -> int:
@@ -55,6 +65,7 @@ class OutputEstimator:
             A dictionary summarizing the planned outputs and estimated sizes.
         """
         parquet_size = self._estimate_parquet_size()
+        raw_parquet_size = self._estimate_raw_parquet_size()
         metrics_size = self._estimate_metrics_size()
         artifacts_size = self._estimate_artifacts_size()
         total_size = parquet_size + metrics_size + artifacts_size
@@ -75,6 +86,9 @@ class OutputEstimator:
                 "evaluation.parquet": parquet_size,
                 "metrics.json": metrics_size,
                 "artifacts.json": artifacts_size,
+            },
+            "raw_estimated_sizes": {
+                "evaluation.parquet": raw_parquet_size,
             },
             "total_size": total_size,
         }
@@ -122,7 +136,12 @@ class OutputEstimator:
         print()
         for filename, size in plan["estimated_sizes"].items():
             print(filename)
-            print(f"~{self._format_size(size)}")
+            if filename == "evaluation.parquet" and "evaluation.parquet" in plan.get("raw_estimated_sizes", {}):
+                raw_size = plan["raw_estimated_sizes"]["evaluation.parquet"]
+                print(f"Estimated (parquet): ~{self._format_size(size)}")
+                print(f"Raw estimate:        ~{self._format_size(raw_size)}")
+            else:
+                print(f"~{self._format_size(size)}")
             print()
         print("Estimated total:")
         print(self._format_size(plan["total_size"]))

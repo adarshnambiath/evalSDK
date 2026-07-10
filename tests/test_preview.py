@@ -186,7 +186,16 @@ def test_output_estimator_calculates_parquet_size(tmp_path):
     )
     plan = estimator.build_plan()
 
-    assert plan["estimated_sizes"]["evaluation.parquet"] == memory_usage
+    # The heuristic parquet estimate should be <= raw memory usage because
+    # Parquet compression generally reduces storage below in-memory size.
+    parquet_estimate = plan["estimated_sizes"]["evaluation.parquet"]
+    assert parquet_estimate <= memory_usage
+    assert parquet_estimate > 0
+
+    raw_sizes = plan.get("raw_estimated_sizes", {})
+    if "evaluation.parquet" in raw_sizes:
+        assert raw_sizes["evaluation.parquet"] == memory_usage
+
     assert plan["total_size"] == sum(plan["estimated_sizes"].values())
 
 
